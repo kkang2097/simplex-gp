@@ -45,7 +45,7 @@ def prepare_dataset(dataset, uci_data_dir, device=None, train_val_split=0.8):
 
 
 class UCIDataset(Dataset):
-    UCI_PATH = Path(os.path.expanduser("~/datasets/uci/"))
+    UCI_PATH = Path(os.path.expanduser("../../uci/"))
 
     def __init__(
         self,
@@ -56,6 +56,7 @@ class UCIDataset(Dataset):
         train_val_split=0.8,
     ):
         dataset_path = Path(dataset_path)
+        print("Dataset Path: ", dataset_path)
         self.dataset_path = dataset_path
         self.dataset_name = dataset_path.stem
         data = loadmat(str(dataset_path))["data"]
@@ -165,7 +166,8 @@ class UCIDataset(Dataset):
         if len(datasets) == 1:
             return datasets[0]
         else:
-            return datasets
+            #return protein
+            return datasets[4]
 
 class EarlyStopper:
   def __init__(self, patience=10, delta=1e-4):

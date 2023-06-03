@@ -1,0 +1,7 @@
+dataset: str = None, data_dir: str = None, log_int: int = 1, seed: int = None, device: int = 0,
+         epochs: int = 100, lr: int = 0.1, p_epochs: int = 200, lanc_iter: int = 100, pre_size: int = 100,
+         cg_iter: int = 1000, cg_tol: float = 1.0, cg_eval_tol: float = 1e-2, nu: float = None,
+         order: int = 1, min_noise: float = 1e-4
+
+// Run this command for protein dataset
+python train_simplexgp.py medium

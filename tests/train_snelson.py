@@ -60,8 +60,11 @@ def train(x, y, model, mll, optim, lanc_iter=100, pre_size=100):
 
     optim.step()
 
+  loss_item = loss.detach().item()
+  print("LOSS:")
+  print(loss_item)
   return {
-    'train/mll': -loss.detach().item(),
+    'train/mll': -loss_item,
   }
 
 
@@ -70,19 +73,33 @@ def train_model(model_cls, device, x, y):
   mll = gp.mlls.ExactMarginalLogLikelihood(model.likelihood, model)
   optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
 
+  for param_name, param in model.named_parameters():
+    print(f'Parameter name: {param_name:42} value = {param}')
+
   train_dict = None  
   for _ in tqdm(range(100)):
     train_dict = train(x, y, model, mll, optimizer)
+
+  for param_name, param in model.named_parameters():
+    print(f'Parameter name: {param_name:42} value = {param}')
+
+  print(f'Actual outputscale: {model.covar_module.outputscale}')
+  print(f'Actual Noise: {model.likelihood.noise_covar.noise}')
+  print(f'Actual Mean: {model.mean_module.constant}')
+  print(dir(model.base_covar_module))
+  exit()
   return train_dict
 
 
 def main():
-  device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+  #device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+  device='cpu'
   print(f'Using device {device}')
 
+  n=5
   df = pd.read_csv(f'{os.path.dirname(__file__)}/../notebooks/snelson.csv')
-  train_x = torch.from_numpy(df.x.values[:, np.newaxis]).float().to(device).contiguous()
-  train_y = torch.from_numpy(df.y.values).float().to(device).contiguous()
+  train_x = torch.from_numpy(df.x.values[:, np.newaxis]).float()[:n].to(device).contiguous()
+  train_y = torch.from_numpy(df.y.values).float()[:n].to(device).contiguous()
   print(train_x.shape, train_y.shape)
 
   sgp_mll = train_model(SimplexGPModel, device, train_x, train_y)['train/mll']

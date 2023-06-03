@@ -36,7 +36,8 @@ def train(x, y, model, mll, optim, lanc_iter=100, cg_iter=1000, pre_size=100, cg
        gp.settings.max_preconditioner_size(pre_size), \
        gp.settings.max_root_decomposition_size(lanc_iter):
     t_start = timer()
-    
+    model.likelihood.noise = 0.1
+    model.likelihood.output_scale = 1.0
     output = model(x)
     loss = -mll(output, y)
 
@@ -68,6 +69,7 @@ def test(x, y, model, mll, lanc_iter=100, pre_size=100, cg_iter=1000, cg_tol=1e-
       t_start = timer()
     
       # pred_y = model.likelihood(model(x))
+      model.likelihood.noise = 0.1
       pred_y = model(x)
       pred_ts = timer() - t_start
 
@@ -84,35 +86,44 @@ def test(x, y, model, mll, lanc_iter=100, pre_size=100, cg_iter=1000, cg_tol=1e-
   }
 
 
+# def main(dataset: str = None, data_dir: str = None, log_int: int = 1, seed: int = None, device: int = 0,
+#          epochs: int = 100, lr: int = 0.1, p_epochs: int = 200, lanc_iter: int = 100, pre_size: int = 100,
+#          cg_iter: int = 1000, cg_tol: float = 1.0, cg_eval_tol: float = 1e-2, nu: float = None,
+#          order: int = 1, min_noise: float = 1e-4):
 def main(dataset: str = None, data_dir: str = None, log_int: int = 1, seed: int = None, device: int = 0,
-         epochs: int = 100, lr: int = 0.1, p_epochs: int = 200, lanc_iter: int = 100, pre_size: int = 100,
-         cg_iter: int = 1000, cg_tol: float = 1.0, cg_eval_tol: float = 1e-2, nu: float = None,
+         epochs: int = 1, lr: int = 0.1, p_epochs: int = 200, lanc_iter: int = 100, pre_size: int = 100,
+         cg_iter: int = 500, cg_tol: float = 1.0, cg_eval_tol: float = 1e-2, nu: float = None,
          order: int = 1, min_noise: float = 1e-4):
-    wandb.init(config={
-      'method': 'Simplex-GP',
-      'dataset': dataset,
-      'lr': lr,
-      'lanc_iter': lanc_iter,
-      'pre_size': pre_size,
-      'nu': nu
-    })
+    
+    model_watch = True
+    if(model_watch==True):
+      wandb.init(config={
+        'method': 'Simplex-GP',
+        'dataset': dataset,
+        'lr': lr,
+        'lanc_iter': lanc_iter,
+        'pre_size': pre_size,
+        'nu': nu
+      })
     
     set_seeds(seed)
-    device = f"cuda:{device}" if (device >= 0 and torch.cuda.is_available()) else "cpu"
+    device = "cpu"
 
-    data_iter = prepare_dataset(dataset, uci_data_dir=data_dir, device=device)
+    #Testing on protein dataset, re-do utils.py Dataset.create() method to change dataset
+    data_iter = prepare_dataset(dataset, uci_data_dir = '../../uci/', device=device)
     _, train_x, train_y = next(data_iter)
     _, val_x, val_y = next(data_iter)
     _, test_x, test_y = next(data_iter)
 
     print(f'"{dataset}": D = {train_x.size(-1)}, Train N = {train_x.size(0)}, Val N = {val_x.size(0)} Test N = {test_x.size(0)}')
 
-    wandb.config.update({
-      'D': train_x.size(-1),
-      'N_train': train_x.size(0),
-      'N_test': test_x.size(0),
-      'N_val': val_x.size(0)
-    })
+    if(model_watch==True):
+      wandb.config.update({
+        'D': train_x.size(-1),
+        'N_train': train_x.size(0),
+        'N_test': test_x.size(0),
+        'N_val': val_x.size(0)
+      })
 
     model = SimplexGPModel(train_x, train_y, nu=nu, order=order, min_noise=min_noise).to(device)
     mll = gp.mlls.ExactMarginalLogLikelihood(model.likelihood, model)
@@ -121,9 +132,10 @@ def main(dataset: str = None, data_dir: str = None, log_int: int = 1, seed: int 
     stopper = EarlyStopper(patience=p_epochs)
 
     for i in tqdm(range(epochs)):
-      train_dict = train(train_x, train_y, model, mll, optimizer,
-                         lanc_iter=lanc_iter, pre_size=pre_size, cg_iter=cg_iter, cg_tol=cg_tol)
-      wandb.log(train_dict, step=i + 1)
+      # Try not training at all...
+      # train_dict = train(train_x, train_y, model, mll, optimizer,
+      #                    lanc_iter=lanc_iter, pre_size=pre_size, cg_iter=cg_iter, cg_tol=cg_tol)
+      # wandb.log(train_dict, step=i + 1)
       
       if (i % log_int) == 0:
         val_dict = test(val_x, val_y, model, mll,
